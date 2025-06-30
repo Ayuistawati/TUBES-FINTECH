@@ -1,0 +1,23 @@
+# Node.js modules
+./backend/node_modules
+./frontend/node_modules
+
+# Python & ML folder specific ignores
+# Ignore virtual environments
+ml/venv*/
+ml/venv310/
+
+# Ignore Python cache
+ml/__pycache__/
+
+# Ignore large data files and datasets
+ml/*.csv
+ml/*.xlsx
+ml/*~$*.xlsx
+
+# Ignore saved models and binaries
+ml/*.pkl
+ml/*.zip
+ml/*.sav
+
+ml.zip
