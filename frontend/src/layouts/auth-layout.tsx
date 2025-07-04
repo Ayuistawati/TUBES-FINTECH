@@ -4,7 +4,7 @@ import { isAuthenticated } from "#/lib/auth";
 
 export function AuthLayout() {
   if (isAuthenticated()) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/dashboard/premi" replace />;
   }
 
   return (

@@ -3,7 +3,6 @@ import { Link, useNavigate } from "react-router-dom";
 import toast, { Toaster } from "react-hot-toast";
 import api from "#/lib/axios";
 import CompanyLogo from "../../assets/images/logo.svg";
-import { useAuth } from "#/context/auth/AuthProvider";
 
 interface FormData {
   email: string;
@@ -27,7 +26,6 @@ const Spinner = () => (
 );
 
 export default function Login() {
-  const { login } = useAuth(); //
   const navigate = useNavigate();
 
   const {
@@ -46,11 +44,9 @@ export default function Login() {
     try {
       const { data: resp } = await api.post("/auth/login", data);
       const { token, user } = resp;
-      // 1) update React state & localStorage
-      login(token, user);
-      // 2) notify
+      localStorage.setItem("authToken", token);
+      localStorage.setItem("authUser", JSON.stringify(user));
       toast.success("Login berhasil!");
-      // 3) redirect
       navigate("/dashboard/premi", { replace: true });
     } catch (err: any) {
       toast.error(err.response?.data?.message || err.message || "Login gagal.");

@@ -58,6 +58,7 @@ export function AuthProvider({ children }: React.PropsWithChildren<{}>) {
   };
 
   const logout = () => {
+    console.log("testing logout");
     setUser(null);
     setToken(null);
     localStorage.removeItem("authToken");

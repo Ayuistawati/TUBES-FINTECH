@@ -54,7 +54,7 @@ const Navbar: React.FC<NavbarProps> = ({ user, logoUrl }) => {
           {user ? (
             // Jika user sudah login
             <a
-              href="/dashboard"
+              href="/dashboard/premi"
               className="px-4 py-2 bg-white text-green-800 rounded-md font-semibold text-sm hover:bg-gray-200 transition"
             >
               Dashboard
