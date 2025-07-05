@@ -6,6 +6,7 @@ import { Login, Register } from "./pages/auth";
 import Home from "./pages/home";
 import { UserDashboard } from "./pages/users";
 import { PremiDashboard } from "./pages/premi";
+import { KlaimDashboard } from "./pages/klaim";
 
 // Ideally this would be an API call to server to get logged in user data
 const getUserData = () => {
@@ -36,6 +37,7 @@ export const router = createBrowserRouter(
       <Route path="/dashboard" element={<AppLayout />}>
         <Route path="overview" element={<UserDashboard />} />
         <Route path="premi" element={<PremiDashboard />} />
+        <Route path="klaim" element={<KlaimDashboard />} />
       </Route>
     </Route>
   )

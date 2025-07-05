@@ -9,7 +9,7 @@ export function NavBarExpand() {
   };
   return (
     <div className="flex h-full min-h-screen w-56 flex-col items-center overflow-hidden rounded-r bg-white text-gray-600 shadow-sm dark:border-gray-800 dark:border-r dark:bg-gray-900 dark:text-gray-400">
-      <a className="mt-3 gap-2 flex justify-start items-center" href="/">
+      <a className="mt-3 gap-2 flex justify-start items-center" href="/dashboard/premi">
         <img src={CompanyLogo} alt="Company Logo" className="w-12" />
         <span className="text-green-700 font-bold text-sm">Agrisure</span>
       </a>
