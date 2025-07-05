@@ -1,3 +1,4 @@
+// src/pages/PremiDashboard.tsx
 import { useState, useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { Toaster, toast } from "react-hot-toast";
@@ -27,31 +28,36 @@ interface KlaimForm {
 }
 
 export default function PremiDashboard() {
-  // Form for hitung premi
+  // --- Hitung Premi Form ---
   const {
-    control,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-    reset,
+    control: controlH,
+    handleSubmit: handleSubmitH,
+    formState: { isSubmitting: isHSubmitting },
+    reset: resetH,
   } = useForm<HitungPremiForm>();
 
-  // State for stored results
+  // --- Klaim Form (separate instance) ---
+  const {
+    control: controlK,
+    handleSubmit: handleSubmitK,
+    formState: { isSubmitting: isKSubmitting },
+    reset: resetK,
+  } = useForm<KlaimForm>();
+
   const [results, setResults] = useState<Result[]>([]);
-
-  // Track which result is being claimed
   const [claimingId, setClaimingId] = useState<string | null>(null);
-  // Track claim responses
-  const [claims, setClaims] = useState<Record<string, { klaim: string; tingkat_kerusakan: string; foto_lahan: string }>>({});
+  const [claims, setClaims] = useState<
+    Record<string, { tingkat_kerusakan: string; klaim: string; foto_lahan: string }>
+  >({});
 
-  // On mount, load existing results from localStorage
+  // Load saved premi results and prefill user data
   useEffect(() => {
     const saved = localStorage.getItem("premiResults");
     if (saved) setResults(JSON.parse(saved));
-    // prefill petani data
     const u = localStorage.getItem("authUser");
     if (u) {
       const user = JSON.parse(u);
-      reset({
+      resetH({
         petani_id: user._id,
         provinsi: user.provinsi,
         kabupaten: user.kabupaten,
@@ -59,46 +65,55 @@ export default function PremiDashboard() {
         detail_alamat: user.alamat_lengkap,
       } as any);
     }
-  }, [reset]);
+  }, [resetH]);
 
-  // Helper to persist results
+  // Persist to localStorage
   const persistResults = (newResults: Result[]) => {
     setResults(newResults);
     localStorage.setItem("premiResults", JSON.stringify(newResults));
   };
 
-  // Submit handler for hitung premi
+  // Handler: Hitung Premi
   const onHitung = async (data: HitungPremiForm) => {
     try {
       const { data: resp } = await api.post("/premi/hitung", data);
       toast.success(resp.message);
-      const newRes: Result = resp.data;
-      persistResults([...results, newRes]);
-      reset(data); // keep same user data but clear numeric fields if you like
+      persistResults([...results, resp.data]);
+      // Optionally clear only numeric fields:
+      resetH(
+        (prev) =>
+          ({
+            ...prev,
+            luas_panen: 0,
+            produktivitas: 0,
+            produksi: 0,
+            riwayat_gagal_panen: 0,
+            nilai_panen: 0,
+          } as any)
+      );
     } catch (err: any) {
       toast.error(err.response?.data?.message || err.message);
     }
   };
 
-  // Submit handler for klaim, keyed per result.id
-  const onKlaim = (id: string) => async (formData: KlaimForm) => {
-    try {
-      const body = new FormData();
-      body.append("tingkat_kerusakan", String(formData.tingkat_kerusakan));
-      if (formData.foto_lahan[0]) body.append("foto_lahan", formData.foto_lahan[0]);
-      const { data: resp } = await api.post(`/premi/klaim/${id}`, body, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-      toast.success(resp.message);
-      setClaims({
-        ...claims,
-        [id]: resp.data,
-      });
-      setClaimingId(null);
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || err.message);
-    }
-  };
+  // Handler: Klaim Premi
+  const onKlaim = (id: string) =>
+    handleSubmitK(async (data) => {
+      try {
+        const form = new FormData();
+        form.append("tingkat_kerusakan", String(data.tingkat_kerusakan));
+        if (data.foto_lahan[0]) form.append("foto_lahan", data.foto_lahan[0]);
+        const { data: resp } = await api.post(`/premi/klaim/${id}`, form, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+        toast.success(resp.message);
+        setClaims((prev) => ({ ...prev, [id]: resp.data }));
+        setClaimingId(null);
+        resetK();
+      } catch (err: any) {
+        toast.error(err.response?.data?.message || err.message);
+      }
+    });
 
   const inputStyles =
     "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring focus:ring-green-500 focus:ring-opacity-50";
@@ -108,10 +123,10 @@ export default function PremiDashboard() {
     <section className="p-6 max-w-4xl mx-auto space-y-8">
       <Toaster position="top-center" />
 
-      {/* HITUNG PREMI FORM */}
+      {/* Hitung Premi */}
       <div>
         <h2 className="text-2xl font-bold mb-4">Hitung Premi</h2>
-        <form onSubmit={handleSubmit(onHitung)} className="space-y-4">
+        <form onSubmit={handleSubmitH(onHitung)} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {[
               { name: "petani_id", label: "Petani ID", type: "hidden" },
@@ -128,7 +143,7 @@ export default function PremiDashboard() {
               <Controller
                 key={f.name}
                 name={f.name as keyof HitungPremiForm}
-                control={control}
+                control={controlH}
                 rules={{ required: `${f.label} wajib diisi` }}
                 render={({ field, fieldState }) => (
                   <div className={f.type === "hidden" ? "hidden" : ""}>
@@ -139,7 +154,7 @@ export default function PremiDashboard() {
                       id={f.name}
                       type={f.type}
                       {...field}
-                      disabled={isSubmitting}
+                      disabled={isHSubmitting}
                       className={`${inputStyles} ${fieldState.error ? "border-red-500" : ""}`}
                     />
                     {fieldState.error && (
@@ -152,15 +167,15 @@ export default function PremiDashboard() {
           </div>
           <button
             type="submit"
-            disabled={isSubmitting}
+            disabled={isHSubmitting}
             className="w-full rounded-md bg-green-700 px-4 py-2 text-white hover:bg-green-800 disabled:opacity-50"
           >
-            {isSubmitting ? "Menghitung..." : "Hitung Premi"}
+            {isHSubmitting ? "Menghitung..." : "Hitung Premi"}
           </button>
         </form>
       </div>
 
-      {/* LIST OF RESULTS */}
+      {/* Daftar Premi & Klaim */}
       <div className="space-y-6">
         <h2 className="text-2xl font-bold">Daftar Premi</h2>
         {results.map((r) => (
@@ -178,7 +193,6 @@ export default function PremiDashboard() {
               <strong>Premi Dibayar:</strong> {r.premi_dibayar}
             </p>
 
-            {/* If we have a claim result, show it */}
             {claims[r.id] ? (
               <div className="mt-2 p-2 bg-green-50 rounded">
                 <h4 className="font-semibold">Hasil Klaim</h4>
@@ -193,16 +207,12 @@ export default function PremiDashboard() {
                 </p>
               </div>
             ) : (
-              // Otherwise, show button or form
               <>
                 {claimingId === r.id ? (
-                  <form
-                    onSubmit={handleSubmit(onKlaim(r.id))}
-                    className="mt-2 space-y-3 border-t pt-3"
-                  >
+                  <form onSubmit={onKlaim(r.id)} className="mt-2 space-y-3 border-t pt-3">
                     <Controller
                       name="tingkat_kerusakan"
-                      control={control as any}
+                      control={controlK}
                       rules={{ required: "Tingkat kerusakan wajib diisi" }}
                       render={({ field, fieldState }) => (
                         <div>
@@ -210,7 +220,7 @@ export default function PremiDashboard() {
                           <input
                             type="number"
                             {...field}
-                            disabled={isSubmitting}
+                            disabled={isKSubmitting}
                             className={`${inputStyles} ${fieldState.error ? "border-red-500" : ""}`}
                           />
                           {fieldState.error && (
@@ -221,7 +231,7 @@ export default function PremiDashboard() {
                     />
                     <Controller
                       name="foto_lahan"
-                      control={control as any}
+                      control={controlK}
                       rules={{ required: "Foto lahan wajib diunggah" }}
                       render={({ field, fieldState }) => (
                         <div>
@@ -229,9 +239,10 @@ export default function PremiDashboard() {
                           <input
                             type="file"
                             accept="image/*"
-                            {...field}
-                            disabled={isSubmitting}
-                            className="mt-1 block w-full"
+                            disabled={isKSubmitting}
+                            onChange={(e) => {
+                              field.onChange(e.target.files); // pass FileList to RHF
+                            }}
                           />
                           {fieldState.error && (
                             <p className="mt-1 text-sm text-red-600">{fieldState.error.message}</p>
@@ -242,14 +253,17 @@ export default function PremiDashboard() {
                     <div className="flex gap-2">
                       <button
                         type="submit"
-                        disabled={isSubmitting}
+                        disabled={isKSubmitting}
                         className="rounded-md bg-green-600 px-4 py-2 text-white hover:bg-green-700 disabled:opacity-50"
                       >
-                        Submit Klaim
+                        {isKSubmitting ? "Mengirim Klaim..." : "Submit Klaim"}
                       </button>
                       <button
                         type="button"
-                        onClick={() => setClaimingId(null)}
+                        onClick={() => {
+                          setClaimingId(null);
+                          resetK();
+                        }}
                         className="rounded-md bg-gray-300 px-4 py-2 hover:bg-gray-400"
                       >
                         Cancel
