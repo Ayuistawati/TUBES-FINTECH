@@ -74,6 +74,9 @@ const hitungPremi = async (req, res) => {
   }
 };
 
+console.log('👉 FLASK_API_URL:', process.env.FLASK_API_URL);
+
+
 // ========== KLAIM PREMI ==========
 const klaimPremi = async (req, res) => {
   try {
